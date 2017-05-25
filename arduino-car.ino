@@ -17,6 +17,7 @@ Servo myservo;  // create servo object to control a servo
 int pos = 0;    // variable to store the servo position
 
 const byte min_R = 5, max_R = 7, over_R = 10, out_R = 3400;
+const byte rotation_90 = 600, rotation_60 = 400, rotation_30 = 200;
 String logStr = "";
 
 void setup() {
@@ -42,13 +43,9 @@ void loop() {
     Serial.print(dist_C); Serial.print(", ");
     Serial.println(dist_R);
 
-    // carMove();    
-    //delay(500);
-    if (dist_C > max_R) {
-        forward(500);
-    } else {
-        backward(500);
-    }
+    carMove();    
+    delay(50);
+
     // forward(1500);
     // coast(300);
     // turnRight(600);
@@ -62,53 +59,36 @@ void loop() {
 }
 
 void carMove() {
-    // 控制馬達B 正轉 // 10
-    //digitalWrite(IN3_R, HIGH);
-    //digitalWrite(IN4_R, LOW);
+    if (dist_C > max_R) {
+        if (dist_L > max_R && dist_R > max_R) {
+            forward(500);
+        } else {
+            chooseRotation();
+        }
+    }
+}
 
-    // if (dist_C > max_R) {
-    //     if (dist_L > max_R && dist_R > max_R) {
-    //         forward();
-    //     } else {
-    //         if (dist_L < min_R && dist_R > max_R) {
-    //             TRight();
-    //         }
-    //         if (dist_R < min_R && dist_L > max_R) {
-    //             TLeft();
-    //         }
-    //     }
-    // } else {
-    //     if (dist_L > max_R && dist_R > max_R) {
-    //         reverse();
-    //     } else {
-    //         if (dist_L < min_R && dist_R > max_R) {
-    //             TRight();
-    //         }
-    //         if (dist_R < min_R && dist_L > max_R) {
-    //             TLeft();
-    //         }
-    //     }
-    // }
+void chooseRotation() {
+    coast(500);
+    backward(300);
+    if (dist_R < min_R && dist_L > max_R) {
+        turnLeft(rotation_90);
+        coast(300);
+    } else if (dist_L < min_R && dist_R > max_R) {
+        turnRight(rotation_90);
+        coast(300);
+    } else {
+        rotateRandom();
+    }
+}
 
-    
-
-    // if (dist_C < min_R) {
-    //     reverse();
-    // }
-    // if (dist_L > min_R && dist_C > min_R && dist_R > min_R) {
-    //     forward();
-    // }
-    // if (dist_L < min_R && dist_R > max_R) {
-    //     TLeft();
-    // }
-    // if (dist_L > max_R && dist_R < min_R) {
-    //     TRight();
-    // }
-
-    // reverse();
-    // TLeft();
-    // TRight();
-    // stop();
+void rotateRandom() {
+    // random number 0 ~ 1
+    long randomNumber = random(2);
+    if (randomNumber == 0)
+        turnLeft(rotation_90);
+    else
+        turnRight(rotation_90);
 }
 
 // 設定L298n控制腳位為輸出
