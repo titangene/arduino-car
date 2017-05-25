@@ -1,42 +1,47 @@
+#include <Servo.h>         // Include Servo Motor library
+
 // L298N 的控制訊號腳位
-const byte IN1_L = 13, IN2_L = 12, IN3_R = 11, IN4_R = 10;
+#define Left_Motor_IN1 = 13;
+#define Left_Motor_IN2 = 12;
+#define Right_Motor_IN3 = 11;
+#define Right_Motor_IN4 = 10;
 
 // SG90 超音波
 //Input pin to receive echo pulse
-const byte EchoPin_L = 9, EchoPin_R = 7, EchoPin_C = 5;
+#define Echo_Pin_L = 9;
+#define Echo_Pin_R = 7;
+#define Echo_Pin_C = 5;
 //Output pin to send trigger signal
-const byte TrigPin_L = 8, TrigPin_R = 6, TrigPin_C = 4;
-long dist_L, dist_R, dist_C;
+#define Trig_Pin_L = 8;
+#define Trig_Pin_R = 6;
+#define Trig_Pin_C = 4;
+unsigned long dist_L, dist_R, dist_C;
 
 // 伺服馬達 (SG90)
-const byte PWM = 3;
+#define ServoPin = 3;
+Servo servoMotor;  // create servo object to control a servo
 
-#include <Servo.h>
-
-Servo myservo;  // create servo object to control a servo
-int pos = 0;    // variable to store the servo position
-
-const byte min_R = 5, max_R = 7, over_R = 10, out_R = 3400;
-const byte rotation_90 = 600, rotation_60 = 400, rotation_30 = 200;
+const byte MIN_Range = 5, MAX_Range = 7, OVER_Range = 10;
+const short OUT_Range = 3400;
+const short rotation_180 = 1200, rotation_90 = 600, rotation_60 = 400, rotation_30 = 200, rotation_15 = 100;
+byte servo_Pos = 0;    // variable to store the servo position
 String logStr = "";
 
 void setup() {
     // 設定L298n控制腳位為輸出
     setCarTire();
     // 超音波 (HC-SR04)
-    setUltrasound(TrigPin_L);
-    setUltrasound(TrigPin_R);
-    setUltrasound(TrigPin_C);
+    setUltrasound(Trig_Pin_L);
+    setUltrasound(Trig_Pin_R);
+    setUltrasound(Trig_Pin_C);
     // 伺服馬達 (SG90)
-    //setServoMotor(PWM);
+    //setServoMotor(ServoPin);
 }
 
-boolean run = true;
-
 void loop() {
-    dist_L = Ultrasound(EchoPin_L, TrigPin_L);
-    dist_R = Ultrasound(EchoPin_R, TrigPin_R);
-    dist_C = Ultrasound(EchoPin_C, TrigPin_C);
+    dist_L = Ultrasound(Echo_Pin_L, Trig_Pin_L);
+    dist_R = Ultrasound(Echo_Pin_R, Trig_Pin_R);
+    dist_C = Ultrasound(Echo_Pin_C, Trig_Pin_C);
 
     Serial.print(logStr); Serial.print(" - ");
     Serial.print(dist_L); Serial.print(", ");
@@ -47,36 +52,58 @@ void loop() {
     delay(50);
 
     // forward(1500);
-    // coast(300);
+    // backward(1500);
+    // turnLeft(600);
     // turnRight(600);
     // coast(300);
-    // backward(1500);
-    // coast(300);
-    // turnLeft(600);
-    // coast(300);
 
-    //ServoMotor_180(EchoPin_C, TrigPin_C);
+    //ServoMotor_180(Echo_Pin_C, Trig_Pin_C);
 }
 
 void carMove() {
-    if (dist_C > max_R) {
-        if (dist_L > max_R && dist_R > max_R) {
+    if (dist_C > MAX_Range) {
+        if (dist_L > MIN_Range && dist_R > MIN_Range) {
             forward(500);
+        } else if (dist_L <= MIN_Range && dist_R > MIN_Range) {
+            turnLeft(rotation_15);
+            coast(500);
+        } else if (dist_L > MIN_Range && dist_R <= MIN_Range) {
+            turnRight(rotation_15);
+            coast(500);
         } else {
-            chooseRotation();
+            turnRight(rotation_180);
+            coast(500);
+        }
+        
+    } else {
+        coast(500);
+        backward(300);
+
+        if (dist_L > MIN_Range && dist_R > MIN_Range) {
+            rotateRandom();
+        } else if (dist_L <= MIN_Range && dist_R > MIN_Range) {
+            turnLeft(rotation_90);
+            coast(500);
+        } else if (dist_L > MIN_Range && dist_R <= MIN_Range) {
+            turnRight(rotation_90);
+            coast(500);
+        } else {
+            turnRight(rotation_180);
+            coast(500);
         }
     }
 }
 
 void chooseRotation() {
     coast(500);
-    backward(300);
-    if (dist_R < min_R && dist_L > max_R) {
+    backward(500);
+
+    if (dist_R < MIN_Range && dist_L > MAX_Range) {
         turnLeft(rotation_90);
-        coast(300);
-    } else if (dist_L < min_R && dist_R > max_R) {
+        coast(500);
+    } else if (dist_L < MIN_Range && dist_R > MAX_Range) {
         turnRight(rotation_90);
-        coast(300);
+        coast(500);
     } else {
         rotateRandom();
     }
@@ -93,10 +120,10 @@ void rotateRandom() {
 
 // 設定L298n控制腳位為輸出
 void setCarTire() {
-    pinMode(IN1_L, OUTPUT);
-    pinMode(IN2_L, OUTPUT);
-    pinMode(IN3_R, OUTPUT);
-    pinMode(IN4_R, OUTPUT);
+    pinMode(Left_Motor_IN1, OUTPUT);
+    pinMode(Left_Motor_IN2, OUTPUT);
+    pinMode(Right_Motor_IN3, OUTPUT);
+    pinMode(Right_Motor_IN4, OUTPUT);
 }
 // ------------------------------------------------
 void forward(int time) {
@@ -143,45 +170,45 @@ void brake(int time) {
 // ------------------------------------------------
 //motor A controls
 void motorAForward() {
-    digitalWrite(IN1_L, HIGH);
-    digitalWrite(IN2_L, LOW);
+    digitalWrite(Left_Motor_IN1, HIGH);
+    digitalWrite(Left_Motor_IN2, LOW);
 }
  
 void motorABackward() {
-    digitalWrite(IN1_L, LOW);
-    digitalWrite(IN2_L, HIGH);
+    digitalWrite(Left_Motor_IN1, LOW);
+    digitalWrite(Left_Motor_IN2, HIGH);
 }
  
 //motor B controls
 void motorBForward() {
-    digitalWrite(IN3_R, HIGH);
-    digitalWrite(IN4_R, LOW);
+    digitalWrite(Right_Motor_IN3, HIGH);
+    digitalWrite(Right_Motor_IN4, LOW);
 }
  
 void motorBBackward() {
-    digitalWrite(IN3_R, LOW);
-    digitalWrite(IN4_R, HIGH);
+    digitalWrite(Right_Motor_IN3, LOW);
+    digitalWrite(Right_Motor_IN4, HIGH);
 }
  
 //coasting and braking
 void motorACoast() {
-    digitalWrite(IN1_L, LOW);
-    digitalWrite(IN2_L, LOW);
+    digitalWrite(Left_Motor_IN1, LOW);
+    digitalWrite(Left_Motor_IN2, LOW);
 }
  
 void motorABrake() {
-    digitalWrite(IN1_L, HIGH);
-    digitalWrite(IN2_L, HIGH);
+    digitalWrite(Left_Motor_IN1, HIGH);
+    digitalWrite(Left_Motor_IN2, HIGH);
 }
  
 void motorBCoast() {
-    digitalWrite(IN3_R, LOW);
-    digitalWrite(IN4_R, LOW);
+    digitalWrite(Right_Motor_IN3, LOW);
+    digitalWrite(Right_Motor_IN4, LOW);
 }
  
 void motorBBrake() {
-    digitalWrite(IN3_R, HIGH);
-    digitalWrite(IN4_R, HIGH);
+    digitalWrite(Right_Motor_IN3, HIGH);
+    digitalWrite(Right_Motor_IN4, HIGH);
 }
 // ------------------------------------------------
 // 超音波 (HC-SR04)
@@ -210,26 +237,27 @@ unsigned long ping(byte EchoPin, byte TrigPin) {
 }
 // ------------------------------------------------
 // 伺服馬達 (SG90)
-void setServoMotor(byte PWM) {
-    myservo.attach(PWM, 500, 2400); // 修正脈衝寬度範圍
-    myservo.write(90); //置中
+void setServoMotor(byte ServoPin) {
+    servoMotor.attach(ServoPin, 500, 2400); // 修正脈衝寬度範圍
+    servoMotor.write(90); //置中
     delay(10000); 
 }
 
 void ServoMotor_180(byte EchoPin, byte TrigPin) {
     //Ultrasound(EchoPin, TrigPin);
-    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    for (pos = 0; servo_Pos <= 180; servo_Pos += 1) { // goes from 0 degrees to 180 degrees
         // in steps of 1 degree
-        myservo.write(pos);              // tell servo to go to position in variable 'pos'
+        servoMotor.write(pos);              // tell servo to go to position in variable 'pos'
         delay(15);                       // waits 15ms for the servo to reach the position
 
         //Ultrasound(EchoPin, TrigPin);
     }
-    for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
-        myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    for (pos = 180; servo_Pos >= 0; servo_Pos -= 1) { // goes from 180 degrees to 0 degrees
+        servoMotor.write(pos);              // tell servo to go to position in variable 'pos'
         delay(15);                       // waits 15ms for the servo to reach the position
 
         //Ultrasound(EchoPin, TrigPin);
     }
 }
+
 
