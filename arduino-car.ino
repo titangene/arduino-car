@@ -5,26 +5,35 @@ const int Echo_Pin_L = 9, Echo_Pin_R = 7, Echo_Pin_C = 5;
 const int Trig_Pin_L = 8, Trig_Pin_R = 6, Trig_Pin_C = 4;
 
 unsigned int dist_C[15], dist_L[15], dist_R[15];
-unsigned int tmpDist_C, tmpDist_L, tmpDist_R, dist_L_AVE;
+unsigned int dist_L_AVE;
 unsigned int dist_C_Throw[15], dist_L_Throw[15], dist_R_Throw[15];
+int cut_C = 0, cut_L = 0, cut_R = 0;
+const int interval_length_OneDim = 7, 
+          interval_C_length_TwoDim = 5, 
+          interval_LR_length_TwoDim = 10;
+
+// unsigned int interval_C[interval_length][interval_C_length_TwoDim], 
+//              interval_L[interval_length][interval_LR_length_TwoDim], 
+//              interval_R[interval_length][interval_LR_length_TwoDim];
+
+unsigned int tmpDist_C, tmpDist_L, tmpDist_R;
+
+const int get_dist_delay = 60;
+// 車寬 13.5 cm，場地寬 30 cm，左右邊超音波可能最長距離 16.5 cm
+const float dist_LR_max = 16.5;
+// 即時檢查目前左右邊超音波可能最長距離 (EX：L = 10, 那 R 一定 <= 6.5 )
+const float dist_L_current_max = 16.5, dist_R_current_max = 16.5;
+// 每格邊長 30 cm，假設場地最大 30 x 5 片，正面超音波可能最長距離 150 cm
+const float dist_C_max = 150;
 
 const int perSecGetDist = 10;
 int i, count = 0;
-
-// 車寬 13.5 cm，左右邊超音波可能最長距離 86.5 cm
-const float dist_LR_max = 86.5;
-// 即時檢查目前左右邊超音波可能最長距離 (EX：L = 20, 那 R 一定 <= 66.5 )
-float dist_L_current_max = 86.5, dist_R_current_max = 86.5;
-
-// 每格地 100 cm，假設場地最大 10 x 10 片，正面超音波可能最長距離 1000 cm
-const float dist_C_max = 1000;
 
 unsigned long previous_time;
 unsigned long current_time;
 unsigned long calc_time;
 
-bool L_Flag = false;
-bool R_Flag = false;
+bool L_Flag = false, R_Flag = false;
 #define true 1
 #define false 0
 
@@ -41,73 +50,66 @@ void setup() {
 
 void loop() {
     get_dist();
-    delay(1000);
+    action(0);
+    delay(500);
 }
 
 void get_dist() {
-    i_C = 0, i_L = 0, i_R = 0, calc_time = 0;
-    get_dist_CLR(0, 0);
-    get_dist_CLR(0, 0);
+    i_C = 0, i_L = 0, i_R = 0;
+    cut_C = 0, cut_L = 0, cut_R = 0;
+    previous_time = millis();
+
     get_dist_CLR(0, 0);
     get_dist_CLR(0, 0);
     get_dist_CLR(0, 0);
 
-    Serial.println(calc_time);
+    current_time = millis() - previous_time;
+    Serial.println(current_time);
+
     print_dist();
-    action(0);
 }
 
 void get_dist_CLR(bool L_Flag, bool R_Flag) {
     get_dist_C();
     get_dist_L();
-    if (L_Flag) {
-        get_dist_L();
-    }
-    if (R_Flag) {
-        get_dist_R();
-    }
+    if (L_Flag) get_dist_L();
+    if (R_Flag) get_dist_R();
     get_dist_R();
 }
 void get_dist_C() {
-    previous_time = millis();
     dist_C[i_C] = Ultrasound('C');
-    delay(60);
-    current_time = millis() - previous_time;
-    calc_time += current_time;
+    delay(get_dist_delay);
     i_C++;
 }
 void get_dist_L() {
-    previous_time = millis();
     dist_L[i_L] = Ultrasound('L');
-    delay(60);
-    current_time = millis() - previous_time;
-    calc_time += current_time;
+    delay(get_dist_delay);
     i_L++;
 }
 void get_dist_R() {
-    previous_time = millis();
     dist_R[i_R] = Ultrasound('R');
-    delay(60);
-    current_time = millis() - previous_time;
-    calc_time += current_time;
+    delay(get_dist_delay);
     i_R++;
 }
 void print_dist() {
     for (i = 0; i < i_C; i++) {
-        if (dist_C[i] < dist_LR_max) {
-            dist_L[i] = tmpDist_L;
-            dist_L_AVE += tmpDist_L;
-        } else {
-            dist_L_Throw[count] = tmpDist_L;
-            count++;
-        }
+        // if (dist_C[i] < dist_C_max) {
+        //     interval(interval_L, dist_C[i]);
+        // } else {
+        //     dist_C_Throw[count] = dist_C[i];
+        //     cut_C++;
+        // }
         Serial.print(dist_C[i]);
         Serial.print(", ");
     }
     Serial.println("");
     for (i = 0; i < i_L; i++) {
+        // if (dist_L[i] < dist_L_current_max) {
+        //     interval(interval_L, dist_L[i]);
+        // }
         Serial.print(dist_L[i]);
         Serial.print(", ");
+        
     }
     Serial.println("");
     for (i = 0; i < i_R; i++) {
@@ -116,6 +118,13 @@ void print_dist() {
     }
     Serial.println("");
 }
+
+// void interval(unsigned int interval[][], unsigned int dist) {
+//     unsigned int dist_arr_i = dist >= 30 ? interval_length_OneDim : dist / 5;
+//     interval[]
+//     Serial.print(dist_arr_i);
+//     Serial.print(": ");
+// }
 
 void action(int dist) {
 
@@ -147,8 +156,8 @@ void func() {
             Serial.print(dist_L_Throw[i]);
             Serial.print(", ");
         }
-    }
     count = 10 - count; // 將原本爆掉數值數量 改成 可用數值數量
+    }
     // 如果有 3/10 以上數值都爆掉，大部分都是超音波離障礙物太近的原因，因此該方向超音波距離就設為 1 cm
     dist_L_AVE = count >= 7 ? dist_L_AVE / count : 1;
     
@@ -202,6 +211,11 @@ unsigned long ping(int EchoPin, int TrigPin) {
     // 傳回 per pulse 時間
     return pulseIn(EchoPin, HIGH);
 }
+
+
+
+
+
 
 
 
