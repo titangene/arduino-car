@@ -25,7 +25,7 @@ int dist_C[dist_arr_length], dist_L[dist_arr_length], dist_R[dist_arr_length];
 int dist_C_AVE = 0, dist_L_AVE = 0, dist_R_AVE = 0;
 
 const int get_dist_delay = 50;
-// 車寬 13.5 cm，場地寬 30 cm，左右邊超音波可能最長距離 16.5 cm
+// 車寬 12 (左右超音波距離) ~ 13.5  cm，場地寬 30 cm，左右邊超音波可能最長距離 16.5 cm
 const float dist_LR_max = 16.5;
 // 即時檢查目前左右邊超音波可能最長距離 (EX：L = 10, 那 R 一定 <= 6.5 )
 const float dist_L_current_max = 16.5, dist_R_current_max = 16.5;
@@ -59,7 +59,6 @@ void loop() {
     dist_L_AVE = get_dist('L', dist_L, dist_L_AVE);
     dist_R_AVE = get_dist('R', dist_R, dist_R_AVE);
     print(x + String(" - L: ") + dist_L_AVE + ", R: " + dist_R_AVE);
-    
 
     //action();
     //print(dist_C_AVE + String(", ") + dist_L_AVE + ", " + dist_R_AVE);
@@ -68,43 +67,10 @@ void loop() {
     // print(String("C: ") + dist_C_AVE);
 
     current_time = millis() - previous_time;
-    print(String("t: ") + current_time);
+    print(current_time);
     print("---------");
     x++;
     delay(500);
-}
-
-int get_dist(char c, int distArr[], int dist_AVE) {
-    count = 0, AVE = 0;
-    for (i = 0; i < dist_arr_length; i++) {
-        distArr[i] = Ultrasound(c);
-        // 濾波
-        dist_AVE = filter(distArr, dist_AVE, i);
-        delay(get_dist_delay);
-    }
-    // 如果全部都是爆掉就設為場地最長值 (此方法不好)
-    return count == 0 ? dist_C_max : dist_AVE;
-}
-
-// 濾波
-int filter(int distArr[], int dist_AVE, int i) {
-    // 第一次平均 0~4
-    if (i <= 4) {
-        if (distArr[i] < dist_C_max) {
-            count++;
-            AVE += distArr[i];
-        }
-        if (i == 4)
-            return AVE / count;
-    } else {
-        // 第二次 0~5, 第三次 0~6...
-        if (!(distArr[i] > dist_AVE + 3) || !(distArr[i] < dist_AVE - 3)) {
-            count++;
-            AVE += distArr[i];
-            return AVE / count;
-        }
-    }
-    return dist_AVE;
 }
 
 void action() {
@@ -143,6 +109,39 @@ void action() {
             }
         }
     }
+}
+
+int get_dist(char c, int distArr[], int dist_AVE) {
+    count = 0, AVE = 0;
+    for (i = 0; i < dist_arr_length; i++) {
+        distArr[i] = Ultrasound(c);
+        // 濾波
+        dist_AVE = filter(distArr, dist_AVE, i);
+        delay(get_dist_delay);
+    }
+    // 如果全部都是爆掉就設為場地最長值 (此方法不好)
+    return count == 0 ? dist_C_max : dist_AVE;
+}
+
+// 濾波
+int filter(int distArr[], int dist_AVE, int i) {
+    // 第一次平均 0~4
+    if (i <= 4) {
+        if (distArr[i] < dist_C_max) {
+            count++;
+            AVE += distArr[i];
+        }
+        if (i == 4)
+            return AVE / count;
+    } else {
+        // 第二次 0~5, 第三次 0~6...
+        if (!(distArr[i] > dist_AVE + 3) || !(distArr[i] < dist_AVE - 3)) {
+            count++;
+            AVE += distArr[i];
+            return AVE / count;
+        }
+    }
+    return dist_AVE;
 }
 
 void print(String s) {
